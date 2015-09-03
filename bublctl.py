@@ -12,9 +12,8 @@ CAMERA_TAKE_PIC						= 39
 CAMERA_GET_BATTERY					= 45
 
 class SocketIOPkg(object):
-	def __init__(self, ref="", dest="", data=None):
+	def __init__(self, ref="", data=None):
 		self.ref	= ref
-		self.dest	= dest
 		self.data	= data
 
 	def getRef(self):
@@ -50,19 +49,15 @@ def parseResponse(msg):
 	parts = msg.split(":", 3)
 	typ = parts[0]
 	ref = parts[1]
-	dest = parts[2]
 	if len(parts) == 4:
 		data = parts[3]
 	else:
 		data = None
-	print("typ: "+ str(typ))
-	print("ref: "+ str(ref))
-	print("dest: "+ str(dest))
 	return {
 		"1": ConnectPkg,
 		"2": HeartbeatPkg,
 		"5": EventPkg,
-		"6": AckPkg,}[typ](ref, dest, data)
+		"6": AckPkg,}[typ](ref, data)
 
 def getToken(ws, count):
 	while True:
@@ -75,22 +70,60 @@ def getToken(ws, count):
 			# do not flood the bublcam with packages
 			time.sleep(1)
 
-def handleResponse(ws, action, count):
-	response = ws.recv()
-	package = parseResponse(response)
-	return count+1
+def handleResponse(msg, count):
+	ref = msg.split("+")[0]
+	if int(ref) == int(count):
+		data = msg.split("+")[1]
+		d = json.loads(data)
+		if str(d[0]["ok"]) is str("True"):
+			print(d[0]["data"])
+			return True
+	return False
+
+def handleAction(ws, action, token, count):
+	while True:
+		# do not flood the bublcam with packages
+		time.sleep(1)
+		ws.send("5:"+ str(count) +"+::{\"name\":\""+ str(action) +"\",\"args\":[\""+ token +"\"]}")
+		response = ws.recv()
+		package = parseResponse(response)
+		if isinstance(package, AckPkg):
+			if handleResponse(package.getData(), count):
+				count += 1
+				break;
+		if isinstance(package, HeartbeatPkg):
+			count = -1
+			break;
+	return count
+
+def isExpected(data, name):
+	d = json.loads(data)
+	if d["name"] == name:
+		return True
+	else:
+		return False
 
 def takeAction(ws, actions):
 	count = 1
 
-	response = ws.recv()
+	# wait for the init-Package
+	while True:
+		response = ws.recv()
+		packet = parseResponse(response)
+		if isinstance(packet, EventPkg):
+			if isExpected(packet.getData(), "init"):
+				break;
+		if isinstance(packet, HeartbeatPkg):
+			ws.close()
+			return
+
 	token = getToken(ws, count)
+
 	count += 1
 	for action in actions:
-		# do not flood the bublcam with packages
-		time.sleep(1)
-		ws.send("5:"+ str(count) +"+::{\"name\":\""+ str(action) +"\",\"args\":[\""+ token.replace('"', '\\"') +"\"]}")
-		count = handleResponse(ws, action, count)
+		count = handleAction(ws, action, token.replace('"', '\\"'), count)
+		if count == -1:
+			break
 	ws.close()
 
 def arguments():
@@ -115,7 +148,7 @@ if __name__ == "__main__":
 	connection.request("GET", "/socket.io/1/")
 	response = connection.getresponse()
 	key = response.read().split(":")[0]
-	websocket.enableTrace(True)
+#	websocket.enableTrace(True)
 	ws = websocket.create_connection("ws://192.168.0.100:3000/socket.io/1/websocket/"+key)
 	try:
 		takeAction(ws, args.actions)
