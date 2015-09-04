@@ -76,9 +76,35 @@ def handleResponse(msg, count):
 		data = msg.split("+")[1]
 		d = json.loads(data)
 		if str(d[0]["ok"]) is str("True"):
-			print(d[0]["data"])
+			print("> "+ str(d[0]["data"]))
 			return True
+		else:
+			print("> "+ str(d[0]["data"]))
+			return False
 	return False
+
+def handleEventResponse(msg, count):
+	data = json.loads(msg)
+	if str("name") in data["args"][0]:
+		if str("captureStatus") in data["args"][0]:
+			print(data["args"][0]["name"] +":"+ data["args"][0]["captureStatus"])
+		else:
+			print(data["args"][0]["name"])
+	elif str("files") in data["args"][0]:
+		if str("path") in data["args"][0]["files"][0]:
+			print("> "+ str(data["args"][0]["files"][0]["path"]))
+			return True
+	response = ws.recv()
+	package = parseResponse(response)
+	if isinstance(package, AckPkg):
+		if handleResponse(package.getData(), count):
+			return True
+	elif isinstance(package, HeartbeatPkg):
+		count = -1
+		return False
+	elif isinstance(package, EventPkg):
+		if handleEventResponse(package.getData(), count):
+			return True
 
 def handleAction(ws, action, token, count):
 	while True:
@@ -94,6 +120,10 @@ def handleAction(ws, action, token, count):
 		if isinstance(package, HeartbeatPkg):
 			count = -1
 			break;
+		if isinstance(package, EventPkg):
+			if handleEventResponse(package.getData(), count):
+				count += 1
+				break;
 	return count
 
 def isExpected(data, name):
