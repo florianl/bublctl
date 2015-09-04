@@ -75,12 +75,16 @@ def handleResponse(msg, count):
 	if int(ref) == int(count):
 		data = msg.split("+")[1]
 		d = json.loads(data)
-		if str(d[0]["ok"]) is str("True"):
-			print("> "+ str(d[0]["data"]))
+		if str("ok") in d[0]:
+			if str(d[0]["ok"]) is str("True"):
+				print("> "+ str(d[0]["data"]))
+				return True
+			else:
+				print("> "+ str(d[0]["data"]))
+				return False
+		elif str("name") in d:
+			print("> "+ str(d[0]["name"]))
 			return True
-		else:
-			print("> "+ str(d[0]["data"]))
-			return False
 	return False
 
 def handleEventResponse(msg, count):
