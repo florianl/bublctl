@@ -9,8 +9,16 @@ SETTING_GET_LIVESTREAM_URL			= 31
 CAMERA_GET_VERSION					= 35
 CAMERA_GET_FIRMWARE_VERSIONS		= 36
 CAMERA_TAKE_PIC						= 39
+CAMERA_VIDEO_START					= 41
+CAMERA_VIDEO_END					= 42
 CAMERA_GET_BATTERY					= 45
+CAMERA_CHANGE_MODE					= 54
 SAVE_DEBUG_LOGS						= 66
+
+CAMERA_TAKE_VIDEO					= 410
+CAMERA_VIDEO_TIME					= 1
+CAMERA_CHANGE_MODE_PIC				= 541
+CAMERA_CHANGE_MODE_VIDEO			= 542
 
 class SocketIOPkg(object):
 	def __init__(self, ref="", data=None):
@@ -115,7 +123,12 @@ def handleAction(ws, action, token, count):
 	while True:
 		# do not flood the bublcam with packages
 		time.sleep(1)
-		ws.send("5:"+ str(count) +"+::{\"name\":\""+ str(action) +"\",\"args\":[\""+ token +"\"]}")
+		if action == 542:
+			ws.send("5:"+ str(count) +"+::{\"name\":\""+ str(CAMERA_CHANGE_MODE) +"\",\"args\":[\""+ token +"\", \"video\"]}")
+		elif action == 541:
+			ws.send("5:"+ str(count) +"+::{\"name\":\""+ str(CAMERA_CHANGE_MODE) +"\",\"args\":[\""+ token +"\", \"photo\"]}")
+		else:
+			ws.send("5:"+ str(count) +"+::{\"name\":\""+ str(action) +"\",\"args\":[\""+ token +"\"]}")
 		response = ws.recv()
 		package = parseResponse(response)
 		if isinstance(package, AckPkg):
@@ -138,7 +151,23 @@ def isExpected(data, name):
 	else:
 		return False
 
-def takeAction(ws, actions):
+def takeVideo(ws, token, count, duration):
+	# Change to video mode
+	handleAction(ws, 542, token, count)
+	# start recording
+	handleAction(ws, 41, token, count)
+	if duration is None:
+		print("time is missing")
+		time.sleep(5)
+	else:
+		time.sleep(int(duration))
+	# stop recording
+	handleAction(ws, 42, token, count)
+	# Change to photo mode
+	handleAction(ws, 541, token, count)
+	return count
+
+def takeAction(ws, actions, time):
 	count = 1
 
 	# wait for the init-Package
@@ -156,7 +185,10 @@ def takeAction(ws, actions):
 
 	count += 1
 	for action in actions:
-		count = handleAction(ws, action, token.replace('"', '\\"'), count)
+		if action == CAMERA_TAKE_VIDEO:
+			count = takeVideo(ws, token.replace('"', '\\"'), count, time[0])
+		else:
+			count = handleAction(ws, action, token.replace('"', '\\"'), count)
 		if count == -1:
 			break
 	ws.close()
@@ -169,6 +201,9 @@ def arguments():
 	parser.add_argument('--takePicture', action='append_const', const=CAMERA_TAKE_PIC, dest="actions", help='take a picture')
 	parser.add_argument('--getBattery', action='append_const', const=CAMERA_GET_BATTERY, dest="actions", help='get the status of the battery')
 	parser.add_argument('--saveLog', action='append_const', const=SAVE_DEBUG_LOGS, dest="actions", help='save the debug logs')
+	video = parser.add_argument_group('Take a Video')
+	video.add_argument('--takeVideo', action='append_const', const=CAMERA_TAKE_VIDEO, dest="actions", help='take a video [default: 5 seconds]')
+	video.add_argument('--time', nargs=1, help='time of the video in seconds')
 	return parser
 
 if __name__ == "__main__":
@@ -187,6 +222,6 @@ if __name__ == "__main__":
 #	websocket.enableTrace(True)
 	ws = websocket.create_connection("ws://192.168.0.100:3000/socket.io/1/websocket/"+key)
 	try:
-		takeAction(ws, args.actions)
+		takeAction(ws, args.actions, args.time)
 	except KeyboardInterrupt:
 		ws.close()
