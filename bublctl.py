@@ -10,6 +10,7 @@ CAMERA_GET_VERSION					= 35
 CAMERA_GET_FIRMWARE_VERSIONS		= 36
 CAMERA_TAKE_PIC						= 39
 CAMERA_GET_BATTERY					= 45
+SAVE_DEBUG_LOGS						= 66
 
 class SocketIOPkg(object):
 	def __init__(self, ref="", data=None):
@@ -96,7 +97,7 @@ def handleEventResponse(msg, count):
 			print(data["args"][0]["name"])
 	elif str("files") in data["args"][0]:
 		if str("path") in data["args"][0]["files"][0]:
-			print("> "+ str(data["args"][0]["files"][0]["path"]))
+			print("> 192.168.0.100/file/"+ str(data["args"][0]["files"][0]["path"]))
 			return True
 	response = ws.recv()
 	package = parseResponse(response)
@@ -167,6 +168,7 @@ def arguments():
 	parser.add_argument('--getFirmwareversion', action='append_const', const=CAMERA_GET_FIRMWARE_VERSIONS, dest="actions", help='get the Version of the firmware')
 	parser.add_argument('--takePicture', action='append_const', const=CAMERA_TAKE_PIC, dest="actions", help='take a picture')
 	parser.add_argument('--getBattery', action='append_const', const=CAMERA_GET_BATTERY, dest="actions", help='get the status of the battery')
+	parser.add_argument('--saveLog', action='append_const', const=SAVE_DEBUG_LOGS, dest="actions", help='save the debug logs')
 	return parser
 
 if __name__ == "__main__":
