@@ -5,7 +5,14 @@ import time
 import argparse
 
 AUTHENTICATE						= 1
+SETTING_GET_VIDEO_RES				= 12
+SETTING_GET_SYNC_MODE				= 14
+SETTING_GET_CAM_GAIN				= 16
+SETTING_GET_CAM_EXPOSURE			= 18
+SETTING_GET_CAM_WHITE_BALANCE		= 20
+SETTING_GET_CAM_MODE				= 24
 SETTING_GET_LIVESTREAM_URL			= 31
+CALIBRATION_GET_CALIBRATION_DATA	= 33
 CAMERA_GET_VERSION					= 35
 CAMERA_GET_FIRMWARE_VERSIONS		= 36
 CAMERA_TAKE_PIC						= 39
@@ -201,6 +208,14 @@ def arguments():
 	parser.add_argument('--takePicture', action='append_const', const=CAMERA_TAKE_PIC, dest="actions", help='take a picture')
 	parser.add_argument('--getBattery', action='append_const', const=CAMERA_GET_BATTERY, dest="actions", help='get the status of the battery')
 	parser.add_argument('--saveLog', action='append_const', const=SAVE_DEBUG_LOGS, dest="actions", help='save the debug logs')
+
+	parser.add_argument('--getVideoresolution', action='append_const', const=+SETTING_GET_VIDEO_RES, dest="actions", help='get the video resolution')
+	parser.add_argument('--getSyncmode', action='append_const', const=SETTING_GET_SYNC_MODE, dest="actions", help='get the sync mode')
+	parser.add_argument('--getCameragain', action='append_const', const=SETTING_GET_CAM_GAIN, dest="actions", help='get the camera gain')
+	parser.add_argument('--getCameraexposure', action='append_const', const=SETTING_GET_CAM_EXPOSURE, dest="actions", help='get the camera exposure')
+	parser.add_argument('--getCamerawhitebalance', action='append_const', const=SETTING_GET_CAM_WHITE_BALANCE, dest="actions", help='get the white balance of the camera')
+	parser.add_argument('--getCameramode', action='append_const', const=SETTING_GET_CAM_MODE, dest="actions", help='get the camera mode')
+	parser.add_argument('--getCalibrationdata', action='append_const', const=CALIBRATION_GET_CALIBRATION_DATA, dest="actions", help='get the calibration data')
 	video = parser.add_argument_group('Take a Video')
 	video.add_argument('--takeVideo', action='append_const', const=CAMERA_TAKE_VIDEO, dest="actions", help='take a video [default: 5 seconds]')
 	video.add_argument('--time', nargs=1, help='time of the video in seconds')
